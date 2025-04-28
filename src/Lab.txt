@@ -1,0 +1,596 @@
+Program 1
+
+Server Side
+
+package lab1;
+
+import java.io.*;
+import java.net.*;
+
+class Server
+{
+   public static void main(String argv[]) throws Exception
+   {
+     String str;
+     String revStr;
+     ServerSocket ss = new ServerSocket(5555);
+     System.out.println("Server Running...! ");
+     Socket serCon= ss.accept();
+     BufferedReader FromClient = new BufferedReader(new InputStreamReader(serCon.getInputStream()));
+     DataOutputStream ToClient = new DataOutputStream(serCon.getOutputStream());
+     str = FromClient.readLine();
+     revStr = new StringBuilder(str).reverse().toString()+'\n';
+     ToClient.writeBytes(revStr) ;
+     ss.close();
+     serCon.close();
+  }
+}
+
+Client Side
+
+package lab1;
+
+import java.io.*;
+import java.net.*;
+
+class Client
+{
+  public static void main(String argv[]) throws Exception
+  {
+    String str="Hello networking";
+    String revStr;
+    Socket cliCon;
+    System.out.println("Connecting the Server...!");
+    cliCon = new Socket("localhost", 5555);
+    DataOutputStream ToServer = new DataOutputStream(cliCon.getOutputStream());
+    BufferedReader FromServer = new BufferedReader(new InputStreamReader(cliCon.getInputStream()));
+    ToServer.writeBytes(str + '\n');
+    revStr= FromServer.readLine();
+    System.out.println("Original String is: " + str);
+    System.out.println("Revers String is: " + revStr);
+    cliCon.close();
+  }
+}
+
+Program 2
+
+Server Side
+
+package lab2;
+
+import java.net.*;
+import java.io.*;
+
+public class Server
+{
+  @SuppressWarnings("resource")
+  
+  public static void main(String[] args) throws Exception
+  {
+    int count=1;
+    System.out.println("Server Running.....!");
+    ServerSocket ss=new ServerSocket(5000);
+    
+    while(true)
+    {
+      new RevThread(ss.accept(),count).start();
+      System.out.println(count+" Client connected.");
+      count++;
+    }
+  }
+}
+
+class RevThread extends Thread
+{
+  Socket s=null;
+  int n;
+  
+  public RevThread(Socket socket,int count)
+  {
+    s=socket;
+    n=count;
+  }
+  public void run()
+  {
+    try
+    {
+      while(true)
+      {
+        System.out.println("Receiving from client "+n);
+        DataInputStream din=new DataInputStream(s.getInputStream());
+        String str=din.readUTF();
+        System.out.println("Processing data of Client "+n);
+        String revStr=new StringBuilder(str).reverse().toString();
+        System.out.println("Sending to client "+n);
+        DataOutputStream dout=new DataOutputStream(s.getOutputStream());
+        dout.writeUTF(revStr);
+      }
+    }
+   catch(IOException e)
+   {
+	   System.out.println(e);
+   }
+  }
+}
+   
+Client side
+
+package lab2;
+
+import java.net.*;
+import java.io.*;
+
+public class Client
+{
+   @SuppressWarnings({ "resource", "deprecation" })
+   public static void main(String[] args) throws Exception
+   {
+     while(true)
+     {
+       Socket s=new Socket("localhost",5000);
+       System.out.println("Enter String to reverse:");
+       DataInputStream in=new DataInputStream(System.in);
+       String str=in.readLine();
+       DataOutputStream dout=new DataOutputStream(s.getOutputStream());
+       dout.writeUTF(str);
+       DataInputStream din=new DataInputStream(s.getInputStream());
+       String rev=din.readUTF();
+       System.out.println("Reversed String:\t"+rev);
+     }
+   }
+}
+
+Program 3
+
+Server Side
+
+package lab3;
+
+import java.io.*;
+import java.net.*;
+public class Server
+{
+   public static void main(String[] args) throws Exception
+   {
+     ServerSocket serverSocket=new ServerSocket(4000);
+     System.out.println("Server Running...!");
+     Socket socket=serverSocket.accept();
+
+     FileInputStream fin=new FileInputStream("C:\\Users\\uvce\\OneDrive\\Desktop\\d.txt");
+     DataOutputStream dout=new DataOutputStream(socket.getOutputStream());
+
+     int r;
+     while((r=fin.read())!=-1)
+     {
+       dout.write(r);
+     }
+     System.out.println("File transfer completed....!");
+     
+     fin.close();
+     serverSocket.close();
+     socket.close();
+   }
+}
+
+Client Side
+
+package lab3;
+
+import java.io.*;
+import java.net.*;
+public class Client
+{
+   @SuppressWarnings("resource")
+   public static void main(String[] args) throws Exception
+   {
+      Socket socket=new Socket("localhost",4000);
+      System.out.println("Connected to Server ...!");
+
+      FileOutputStream fout=new FileOutputStream("C:\\Users\\Uvce\\OneDrive\\Desktop\\dtcpp.txt");
+      DataInputStream din=new DataInputStream(socket.getInputStream());
+      
+      int r;
+      while((r=din.read())!=-1)
+      {
+        fout.write((char)r);
+      }
+      
+    fout.close();
+    socket.close();
+   }
+}
+
+
+program 4
+
+
+
+import java.io.*;
+import java.net.*;
+
+public class Server {
+
+    @SuppressWarnings({"resource", "ConvertToTryWithResources"})
+    public static void main(String args[]) throws IOException {
+        byte b[] = new byte[2048];
+        System.out.println("UDP Server Running....!");
+        DatagramSocket dsoc = new DatagramSocket(1000);
+        FileOutputStream fout = new FileOutputStream("C:\\Users\\Desktop\\S");
+        DatagramPacket dp = new DatagramPacket(b, b.length);
+        dsoc.receive(dp);
+        String str = new String(dp.getData());
+        byte[] strToBytes = str.getBytes();
+        fout.write(strToBytes);
+        System.out.println("File transfer completed....!");
+        fout.close();
+
+    }
+}
+
+
+
+import java.io.*;
+import java.net.*;
+public class UDPClient
+{
+    @SuppressWarnings("resource")
+    public static void main(String args[])throws Exception
+    {
+        byte b[]=new byte[1024];
+        System.out.println("Connecting UDP Server....!");
+        FileInputStream fin=new FileInputStream("C:\\Users\\Desktop\\UDPClient.java");
+        DatagramSocket dsoc=new DatagramSocket();
+        int i=0;
+        while(fin.available()!=0)
+        {
+            b[i]=(byte)fin.read();
+            i++;
+        }
+        fin.close();
+        dsoc.send(new DatagramPacket(b,i,InetAddress.getLocalHost(),1000));
+    }
+}
+
+
+
+
+
+
+
+
+
+program 5
+
+Server Side
+
+package lab5;
+
+import java.net.*;
+
+public class ARPServer
+{
+  @SuppressWarnings("resource")
+  public static void main(String args[])
+  {
+    try
+    {
+      DatagramSocket sdsoc = new DatagramSocket(1309);
+      while(true)
+      {
+        System.out.println("ARP Server Running...!");
+        byte[] sendByte = new byte[1204];
+        byte[] receiveByte = new byte[1204];
+        DatagramPacket recePak = new DatagramPacket(receiveByte,receiveByte.length);
+        sdsoc.receive(recePak );
+        String str = new String(recePak .getData());
+        String s = str.trim();
+        InetAddress addr = recePak .getAddress();
+        int port = recePak.getPort();
+        
+        String ip[] = {"10.0.3.186"};
+        String mac[] = {"D4:3D:7E:12:A3:D9"};
+        
+        for (int i = 0; i < ip.length; i++)
+        {
+          if(s.equals(mac[i]))
+          {
+            sendByte = ip[i].getBytes();
+            DatagramPacket sendPak = new DatagramPacket(sendByte,sendByte.length,addr,port);
+            sdsoc.send(sendPak);
+            break;
+          }
+       }
+       break;
+      }
+   }
+   catch(Exception e)
+   {
+     System.out.println(e);
+    }
+ }
+}
+  
+
+Client Side
+
+package lab5;
+
+import java.io.*;
+import java.net.*;
+
+public class ARPClient
+{
+  public static void main(String args[])
+  {
+    try
+    {
+      DatagramSocket cdSoc = new DatagramSocket();
+      InetAddress addr = InetAddress.getByName("localhost");
+      byte[] sendByte = new byte[1204];
+      byte[] receiveByte = new byte[1024];
+      BufferedReader in = new BufferedReader(new InputStreamReader(System.in));
+      System.out.println("Enter the Physical Address: ");
+      String str = in.readLine();
+      sendByte = str.getBytes();
+      DatagramPacket sendPak = new DatagramPacket(sendByte,sendByte.length,addr,1309);
+      cdSoc.send(sendPak);
+      DatagramPacket recePak = new DatagramPacket(receiveByte,receiveByte.length);
+      cdSoc.receive(recePak );
+      String s = new String(recePak.getData());
+      System.out.println("The Logical Address is :" + s.trim());
+      cdSoc.close();
+   }
+   catch(Exception e)
+   {
+     System.out.println(e);
+   }
+ }
+}
+
+Program 6
+
+server Side
+
+package lab6;
+
+import java.net.*;
+import java.util.Random;
+
+public class DHCPServer
+{
+  @SuppressWarnings("resource")
+  public static void main(String args[])
+  {
+    try
+    {
+      System.out.println("DHCP Server Running...! ");
+      DatagramSocket sdsoc = new DatagramSocket(67);
+      while(true)
+      {
+        byte[] sendByte = new byte[1204];
+        byte[] receiveByte = new byte[1204];
+        DatagramPacket recePak = new DatagramPacket(receiveByte,receiveByte.length);
+        sdsoc.receive(recePak);
+        byte[] mac=recePak.getData();
+        System.out.print("Server allocating IP Address to:");
+        for (int i = 0; i <=5; i++)
+        {
+          System.out.format("%02X%s", mac[i], (i <5) ? "-": "");
+        }
+        InetAddress addr = recePak.getAddress();
+        int port = recePak.getPort();
+        String ip[] = {"10.0.3.186","10.0.3.187","10.0.3.188","10.0.3.189","10.0.3.189"};
+        Random rand = new Random();
+        int i = rand.nextInt(4);
+        ip[i]=ip[i]+" lease time->24hrs";
+        System.out.println("->"+ ip[i]);
+        sendByte = ip[i].getBytes();
+        DatagramPacket sendPak = new DatagramPacket(sendByte,sendByte.length,addr,port);
+        sdsoc.send(sendPak);
+      }
+   }
+   catch(Exception e)
+   {
+     System.out.println(e);
+   }
+ }
+}
+
+Client Side
+
+package lab6;
+
+import java.net.*;
+
+public class DHCPClient
+{
+  public static void main(String args[])
+  {
+    try
+    {
+      DatagramSocket cdsoc = new DatagramSocket();
+      byte[] sendByte = new byte[1204];
+      byte[] receiveByte = new byte[1024];
+      System.out.println("Sending the mac address to server : ");
+      InetAddress address = InetAddress.getLocalHost();
+      NetworkInterface ni = NetworkInterface.getByInetAddress(address);
+      sendByte = ni.getHardwareAddress();
+      for (int i = 0; i < sendByte.length; i++)
+      {
+        System.out.format("%02X%s", sendByte[i], (i < sendByte.length - 1) ? "-": "");
+      }
+      DatagramPacket sender = new DatagramPacket(sendByte,sendByte.length,address,67);
+      cdsoc.send(sender);
+      DatagramPacket recePak = new DatagramPacket(receiveByte,receiveByte.length);
+      cdsoc.receive(recePak);
+      String s = new String(recePak.getData());
+      System.out.println("\nThe Logical Address is :" + s.trim());
+      cdsoc.close();
+    }
+    catch(Exception e)
+    {
+      System.out.println(e);
+    }
+ }
+}
+
+Program 7
+
+package lab7;
+
+import java.util.Scanner;
+
+public class DVR
+{
+  private int distances[];
+  private int ver;
+  
+  public static final int MAX_VALUE = 999;
+  public DVR(int numofver)
+  {
+    this.ver = numofver;
+    distances = new int[numofver + 1];
+  }
+  public void BellmanFordEvaluation(int source, int matrix[][])
+  {
+    for (int node = 1; node <= ver; node++)
+    {
+      distances[node] = MAX_VALUE;
+    }
+    distances[source] = 0;
+    for (int node = 1; node <= ver - 1; node++)
+    {
+      for (int src = 1; src <= ver; src++)
+      {
+        for (int dest = 1; dest <= ver; dest++)
+        {
+          if (matrix[src][dest] != MAX_VALUE)
+          {
+            if (distances[dest] > distances[src] + matrix[src][dest])
+            	
+                distances[dest] = distances[src] + matrix[src][dest];
+          }
+       }
+    }
+  }
+  for (int vertex = 1; vertex <= ver; vertex++)
+  {
+    System.out.println("distance from source " + source + " to " + vertex + " is " + distances[vertex]);
+  }
+ }
+ public static void main(String... arg)
+ {
+   int numofver = 0;
+   int source;
+   
+   Scanner scanner = new Scanner(System.in);
+   
+   System.out.println("Enter the number of vertices");
+   numofver = scanner.nextInt();
+   
+   int matrix[][] = new int[numofver + 1][numofver + 1];
+   System.out.println("Enter the adjacency matrix");
+   
+   for (int src = 1; src <= numofver; src++)
+   {
+     for (int dest = 1; dest <= numofver; dest++)
+     {
+        matrix[src][dest] = scanner.nextInt();
+        if (src == dest)
+        {
+          matrix[src][dest] = 0;
+          continue;
+        }
+        if (matrix[src][dest] == 0)
+        {
+         matrix[src][dest] = MAX_VALUE;
+        }
+     }
+   }
+   System.out.println("Enter the source vertex");
+   source = scanner.nextInt();
+   DVR dvr = new DVR(numofver);
+   dvr.BellmanFordEvaluation(source, matrix);
+   scanner.close();
+ }
+}
+
+Program 8
+
+package lab8;
+
+import java.util.*;
+
+public class Dijk
+{
+  public int distance[] = new int[10];
+  public int cost[][] = new int[10][10];
+  public void calc(int n,int s)
+  {
+    int flag[] = new int[n+1];
+    int i,minpos=1,k,c,minimum;
+    for(i=1;i<=n;i++)
+    {
+     flag[i]=0;
+     this.distance[i]=this.cost[s][i];
+    }
+    
+    c=2;
+    
+    while(c<=n)
+    {
+      minimum=99;
+      for(k=1;k<=n;k++)
+      {
+        if(this.distance[k]<minimum && flag[k]!=1)
+        {
+          minimum=this.distance[i];
+          minpos=k;
+        }
+      }
+      
+      flag[minpos]=1;
+      c++;
+      
+      for(k=1;k<=n;k++)
+      {
+        if(this.distance[minpos]+this.cost[minpos][k] < this.distance[k] && flag[k]!=1 )
+        this.distance[k]=this.distance[minpos]+this.cost[minpos][k];
+      }
+    }
+ }
+  
+ @SuppressWarnings("resource")
+ public static void main(String args[])
+ {
+   int nodes,source,i,j;
+   Scanner in = new Scanner(System.in);
+   System.out.println("Enter the Number of Nodes \n");
+   nodes = in.nextInt();
+   Dijk d = new Dijk();
+   
+   System.out.println("Enter the Cost Matrix Weights: \n");
+   for(i=1;i<=nodes;i++)
+    for(j=1;j<=nodes;j++)
+    {
+      d.cost[i][j]=in.nextInt();
+      if(d.cost[i][j]==0)
+        d.cost[i][j]=999;
+    }
+ 
+ System.out.println("Enter the Source Vertex :\n");
+ source=in.nextInt();
+ 
+ d.calc(nodes,source);
+ 
+  System.out.println("The Shortest Path from Source \t"+source+"\t to all other vertices are : \n");
+  
+  for(i=1;i<=nodes;i++)
+  if(i!=source)
+   System.out.println("source :"+source+"\t destination :"+i+"\t MinCost is :"+d.distance[i]+"\t");
+ }
+}
+
+
+
+

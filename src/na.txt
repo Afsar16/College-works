@@ -1,0 +1,344 @@
+1.program
+
+#include "ns3/core-module.h"
+#include "ns3/network-module.h"
+#include "ns3/internet-module.h"
+#include "ns3/point-to-point-module.h"
+#include "ns3/applications-module.h"
+#include "ns3/netanim-module.h"
+using namespace ns3;
+NS_LOG_COMPONENT_DEFINE ("FirstScriptExample");
+int
+main (int argc, char *argv[])
+{
+ CommandLine cmd;
+ cmd.Parse (argc, argv);
+
+//Log files
+ Time::SetResolution (Time::NS); //Total time your application consumes
+ LogComponentEnable ("UdpEchoClientApplication", LOG_LEVEL_INFO);
+ LogComponentEnable ("UdpEchoServerApplication", LOG_LEVEL_INFO);
+ NodeContainer nodes;
+ nodes.Create (2); //Take number of nodes
+ PointToPointHelper pointToPoint; //Technology to communicate like csma, wifi ethernet pointtopoint
+ pointToPoint.SetDeviceAttribute ("DataRate", StringValue ("1Mbps"));
+ pointToPoint.SetChannelAttribute ("Delay", StringValue ("1ms"));
+ NetDeviceContainer devices; //Install technology on devices
+ devices = pointToPoint.Install (nodes);
+ InternetStackHelper stack; //ask to follow the rules
+ stack.Install (nodes);
+ Ipv4AddressHelper address; //IP address to communicate
+ address.SetBase ("10.1.1.0", "255.255.255.0"); //ip address and subnet address
+ Ipv4InterfaceContainer interfaces = address.Assign (devices);
+ UdpEchoServerHelper echoServer (9);//type of server you want to create with port number
+ ApplicationContainer serverApps = echoServer.Install (nodes.Get (1));
+ serverApps.Start (Seconds (1.0));
+ serverApps.Stop (Seconds (10.0));
+ UdpEchoClientHelper echoClient (interfaces.GetAddress (1), 9);
+ echoClient.SetAttribute ("MaxPackets", UintegerValue (1));
+echoClient.SetAttribute ("Interval", TimeValue (Seconds (1.0)));
+ echoClient.SetAttribute ("PacketSize", UintegerValue (2048));
+ ApplicationContainer clientApps = echoClient.Install (nodes.Get (0));
+ clientApps.Start (Seconds (2.0));
+ clientApps.Stop (Seconds (10.0));
+AnimationInterface anim("np1.xml");
+AsciiTraceHelper eventTraces;
+pointToPoint.EnableAsciiAll(eventTraces.CreateFileStream("np1.tr"));
+pointToPoint.EnablePcapAll ("np1");
+ Simulator::Run ();
+ Simulator::Destroy ();
+ return 0;
+}
+
+
+
+2.program
+
+#include "ns3/core-module.h"
+#include "ns3/network-module.h"
+#include "ns3/internet-module.h"
+#include "ns3/point-to-point-module.h"
+#include "ns3/applications-module.h"
+#include "ns3/netanim-module.h"
+using namespace ns3;
+NS_LOG_COMPONENT_DEFINE ("SecondScriptExample");
+int
+main (int argc, char *argv[])
+{
+ CommandLine cmd;
+ cmd.Parse (argc, argv);
+
+ Time::SetResolution (Time::NS);
+ LogComponentEnable ("UdpEchoClientApplication", LOG_LEVEL_INFO);
+ LogComponentEnable ("UdpEchoServerApplication", LOG_LEVEL_INFO);
+ NodeContainer nodes;
+ nodes.Create (3);
+ PointToPointHelper p2p1;
+ p2p1.SetDeviceAttribute ("DataRate", StringValue ("5Mbps"));
+ p2p1.SetChannelAttribute ("Delay", StringValue ("1ms"));
+ PointToPointHelper p2p2;
+ p2p2.SetDeviceAttribute ("DataRate", StringValue ("10Mbps"));
+ p2p2.SetChannelAttribute ("Delay", StringValue ("5ms"));
+ InternetStackHelper stack;
+ stack.Install (nodes);
+ Ipv4AddressHelper address;
+ address.SetBase ("10.1.1.0", "255.255.255.0");
+ NetDeviceContainer devices;
+ devices=p2p1.Install (nodes.Get (0), nodes.Get (1));
+ Ipv4InterfaceContainer interfaces = address.Assign (devices);
+ devices=p2p2.Install (nodes.Get (1), nodes.Get (2));
+ address.SetBase ("10.1.2.0", "255.255.255.0");
+ interfaces = address.Assign (devices);
+
+Ipv4GlobalRoutingHelper::PopulateRoutingTables();
+UdpEchoServerHelper echoServer (9);//90
+
+ ApplicationContainer serverApps = echoServer.Install (nodes.Get (2));
+ serverApps.Start (Seconds (1.0));
+ serverApps.Stop (Seconds (10.0));
+ UdpEchoClientHelper echoClient (interfaces.GetAddress (1), 9);
+ echoClient.SetAttribute ("MaxPackets", UintegerValue (1));
+ echoClient.SetAttribute ("Interval", TimeValue (Seconds (1.0)));
+ echoClient.SetAttribute ("PacketSize", UintegerValue (1024));
+ ApplicationContainer clientApps = echoClient.Install (nodes.Get (0));
+ clientApps.Start (Seconds (2.0));
+ clientApps.Stop (Seconds (10.0));
+
+ AnimationInterface anim("np2.xml");
+AsciiTraceHelper eventTraces;
+p2p1.EnableAsciiAll(eventTraces.CreateFileStream("np2.tr"));
+p2p1.EnablePcapAll ("np2");
+ Simulator::Run ();
+ Simulator::Destroy ();
+ return 0;
+}
+
+3.program
+
+#include "ns3/core-module.h"
+#include "ns3/network-module.h"
+#include "ns3/netanim-module.h"
+#include "ns3/internet-module.h"
+#include "ns3/point-to-point-module.h"
+#include "ns3/applications-module.h"
+#include "ns3/point-to-point-layout-module.h"
+#include "ns3/netanim-module.h"
+using namespace ns3;
+NS_LOG_COMPONENT_DEFINE ("Star");
+int
+main (int argc, char *argv[])
+{
+ Config::SetDefault ("ns3::OnOffApplication::PacketSize", UintegerValue (137));
+
+ Config::SetDefault ("ns3::OnOffApplication::DataRate", StringValue ("14kb/s"));
+ uint32_t nSpokes = 8;
+ CommandLine cmd;
+ cmd.AddValue ("nSpokes", "Number of nodes to place in the star", nSpokes);
+ cmd.Parse (argc, argv);
+ NS_LOG_INFO ("Build star topology.");
+ PointToPointHelper pointToPoint;
+ pointToPoint.SetDeviceAttribute ("DataRate", StringValue ("5Mbps"));
+ pointToPoint.SetChannelAttribute ("Delay", StringValue ("2ms"));
+ PointToPointStarHelper star (nSpokes, pointToPoint);
+ NS_LOG_INFO ("Install internet stack on all nodes.");
+ InternetStackHelper internet;
+ star.InstallStack (internet);
+ NS_LOG_INFO ("Assign IP Addresses.");
+ star.AssignIpv4Addresses (Ipv4AddressHelper ("10.1.1.0", "255.255.255.0"));
+ NS_LOG_INFO ("Create applications.");
+ uint16_t port = 50000;
+ Address hubLocalAddress (InetSocketAddress (Ipv4Address::GetAny (), port));
+ PacketSinkHelper packetSinkHelper ("ns3::TcpSocketFactory", hubLocalAddress);
+ ApplicationContainer hubApp = packetSinkHelper.Install (star.GetHub ());
+ hubApp.Start (Seconds (1.0));
+hubApp.Stop (Seconds (10.0));
+
+ OnOffHelper onOffHelper ("ns3::TcpSocketFactory", Address ());
+ onOffHelper.SetAttribute ("OnTime", StringValue ("ns3::ConstantRandomVariable[Constant=1]"));
+ onOffHelper.SetAttribute ("OffTime", StringValue ("ns3::ConstantRandomVariable[Constant=0]"));
+ ApplicationContainer spokeApps;
+ for (uint32_t i = 0; i < star.SpokeCount (); ++i)
+ {
+ AddressValue remoteAddress (InetSocketAddress (star.GetHubIpv4Address (i), port));
+ onOffHelper.SetAttribute ("Remote", remoteAddress);
+ spokeApps.Add (onOffHelper.Install (star.GetSpokeNode (i)));
+ }
+ spokeApps.Start (Seconds (1.0));
+ spokeApps.Stop (Seconds (10.0));
+ NS_LOG_INFO ("Enable static global routing.");
+ Ipv4GlobalRoutingHelper::PopulateRoutingTables ();
+ NS_LOG_INFO ("Enable pcap tracing.");
+
+ AnimationInterface anim("np3.xml");
+ AsciiTraceHelper eventTraces;
+ pointToPoint.EnableAsciiAll(eventTraces.CreateFileStream("np3.tr"));
+ pointToPoint.EnablePcapAll ("np3");
+ NS_LOG_INFO ("Run Simulation.");
+ Simulator::Run ();
+ Simulator::Destroy ();
+ NS_LOG_INFO ("Done.");
+ return 0;
+}
+
+4.program
+
+#include "ns3/core-module.h"
+#include "ns3/network-module.h"
+#include "ns3/csma-module.h"
+#include "ns3/internet-module.h"
+#include "ns3/point-to-point-module.h"
+#include "ns3/applications-module.h"
+#include "ns3/ipv4-global-routing-helper.h"
+#include "ns3/netanim-module.h"
+using namespace ns3;
+NS_LOG_COMPONENT_DEFINE ("SecondScriptExample");
+int
+main (int argc, char *argv[])
+{
+ bool verbose = true;
+ uint32_t nCsma = 3;
+ CommandLine cmd;
+ cmd.AddValue ("nCsma", "Number of \"extra\" CSMA nodes/devices", nCsma);
+ cmd.AddValue ("verbose", "Tell echo applications to log if true", verbose);
+ cmd.Parse (argc,argv);
+ if (verbose)
+ {
+ LogComponentEnable ("UdpEchoClientApplication", LOG_LEVEL_INFO);
+ LogComponentEnable ("UdpEchoServerApplication", LOG_LEVEL_INFO);
+ }
+ nCsma = nCsma == 0 ? 1 : nCsma;
+ NodeContainer p2pNodes;
+ p2pNodes.Create (2);
+ NodeContainer csmaNodes;
+ csmaNodes.Add (p2pNodes.Get (1));
+ csmaNodes.Create (nCsma);
+ PointToPointHelper pointToPoint;
+ pointToPoint.SetDeviceAttribute ("DataRate", StringValue ("5Mbps"));
+ pointToPoint.SetChannelAttribute ("Delay", StringValue ("2ms"));
+ NetDeviceContainer p2pDevices;
+ p2pDevices = pointToPoint.Install (p2pNodes);
+ CsmaHelper csma;
+ csma.SetChannelAttribute ("DataRate", StringValue ("100Mbps"));
+ csma.SetChannelAttribute ("Delay", TimeValue (NanoSeconds (6560)));
+ NetDeviceContainer csmaDevices;
+ csmaDevices = csma.Install (csmaNodes);
+ InternetStackHelper stack;
+ stack.Install (p2pNodes.Get (0));
+ stack.Install (csmaNodes);
+ Ipv4AddressHelper address;
+ address.SetBase ("10.1.1.0", "255.255.255.0");
+ Ipv4InterfaceContainer p2pInterfaces;
+ p2pInterfaces = address.Assign (p2pDevices);
+ address.SetBase ("10.1.2.0", "255.255.255.0");
+ Ipv4InterfaceContainer csmaInterfaces;
+ csmaInterfaces = address.Assign (csmaDevices);
+ UdpEchoServerHelper echoServer (9);
+ ApplicationContainer serverApps = echoServer.Install (csmaNodes.Get (nCsma));
+ serverApps.Start (Seconds (1.0));
+ serverApps.Stop (Seconds (10.0));
+ UdpEchoClientHelper echoClient (csmaInterfaces.GetAddress (nCsma), 9);
+ echoClient.SetAttribute ("MaxPackets", UintegerValue (1));
+ echoClient.SetAttribute ("Interval", TimeValue (Seconds (1.0)));
+ echoClient.SetAttribute ("PacketSize", UintegerValue (1024));
+ ApplicationContainer clientApps = echoClient.Install (p2pNodes.Get (0));
+ clientApps.Start (Seconds (2.0));
+ clientApps.Stop (Seconds (10.0));
+ Ipv4GlobalRoutingHelper::PopulateRoutingTables ();
+ AnimationInterface anim("np4.xml");
+ AsciiTraceHelper eventTraces;
+ pointToPoint.EnableAsciiAll(eventTraces.CreateFileStream("np4.tr"));
+ pointToPoint.EnablePcapAll ("np4");
+
+ Simulator::Run ();
+ Simulator::Destroy ();
+ return 0;
+}
+
+
+5.program
+
+#include "ns3/core-module.h"
+#include "ns3/network-module.h"
+#include "ns3/csma-module.h"
+#include "ns3/internet-module.h"
+#include "ns3/point-to-point-module.h"
+#include "ns3/applications-module.h"
+#include "ns3/ipv4-global-routing-helper.h"
+#include "ns3/netanim-module.h"
+
+using namespace ns3;
+NS_LOG_COMPONENT_DEFINE ("SecondScriptExample");
+int main (int argc, char *argv[])
+{
+bool verbose = true;
+if (verbose)
+{
+LogComponentEnable ("UdpEchoClientApplication", LOG_LEVEL_INFO);
+LogComponentEnable ("UdpEchoServerApplication", LOG_LEVEL_INFO);
+}
+NodeContainer host, router, host1;
+host.Create (2);
+router.Create (4);
+NodeContainer subnet1;
+subnet1.Add (host.Get (0));
+subnet1.Add (router.Get (0));
+PointToPointHelper pointToPoint;
+pointToPoint.SetDeviceAttribute ("DataRate", StringValue ("5Mbps"));
+pointToPoint.SetChannelAttribute ("Delay", StringValue ("2ms"));
+NetDeviceContainer subnet1Devices;
+subnet1Devices = pointToPoint.Install (subnet1);
+InternetStackHelper stack;
+stack.Install (router);
+stack.Install (host);
+Ipv4AddressHelper address1, address2, address3, address4, address5, address6 ;
+address1.SetBase ("10.1.1.0", "255.255.255.0");
+Ipv4InterfaceContainer subnet1Interfaces;
+subnet1Interfaces = address1.Assign (subnet1Devices);
+NodeContainer subnet2;
+subnet2.Add (router.Get (0));
+subnet2.Add (router.Get (1));
+NetDeviceContainer subnet2Devices;
+subnet2Devices = pointToPoint.Install (subnet2);
+address2.SetBase ("10.1.2.0", "255.255.255.0");
+Ipv4InterfaceContainer subnet2Interfaces; 
+subnet2Interfaces = address2.Assign (subnet2Devices);
+NodeContainer subnet3; subnet3.Add (router.Get (1));
+subnet3.Add (router.Get (2));
+NetDeviceContainer subnet3Devices;
+subnet3Devices = pointToPoint.Install (subnet3);
+address3.SetBase ("10.1.3.0", "255.255.255.0");
+Ipv4InterfaceContainer subnet3Interfaces;
+subnet3Interfaces = address3.Assign (subnet3Devices);
+NodeContainer subnet4; subnet4.Add (router.Get (1));
+subnet4.Add (router.Get (3));
+NetDeviceContainer subnet4Devices;
+subnet4Devices = pointToPoint.Install (subnet4);
+address4.SetBase ("10.1.4.0", "255.255.255.0");
+Ipv4InterfaceContainer subnet4Interfaces;
+subnet4Interfaces = address4.Assign (subnet4Devices);
+NodeContainer subnet5; subnet5.Add (router.Get (2));
+subnet5.Add (host.Get (1));
+NetDeviceContainer subnet5Devices;
+subnet5Devices = pointToPoint.Install (subnet5);
+address5.SetBase ("10.1.5.0", "255.255.255.0");
+Ipv4InterfaceContainer subnet5Interfaces;
+subnet5Interfaces = address5.Assign (subnet5Devices);
+UdpEchoServerHelper echoServer (9);
+ApplicationContainer serverApps = echoServer.Install (subnet5.Get (1));
+serverApps.Start (Seconds (1.0));
+serverApps.Stop (Seconds (10.0));
+UdpEchoClientHelper echoClient (subnet5Interfaces.GetAddress (1), 9);
+echoClient.SetAttribute ("MaxPackets", UintegerValue (3));
+echoClient.SetAttribute ("Interval", TimeValue (Seconds (1.0)));
+echoClient.SetAttribute ("PacketSize", UintegerValue (1024));
+ApplicationContainer clientApps = echoClient.Install (subnet1.Get (0));
+clientApps.Start (Seconds (1.0)); clientApps.Stop (Seconds (10.0));
+Ipv4GlobalRoutingHelper::PopulateRoutingTables ();
+AnimationInterface anim("np5.xml");
+AsciiTraceHelper eventTraces;
+pointToPoint.EnableAsciiAll(eventTraces.CreateFileStream("np5.tr"));
+pointToPoint.EnablePcapAll ("np5");
+Simulator::Run ();
+Simulator::Destroy ();
+return 0;
+}
